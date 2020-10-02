@@ -1,0 +1,24 @@
+version: '3.3'
+
+volumes:
+  postgres_data:
+
+services:
+  db:
+    image: postgres:latest
+    environment:
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - ./.env
+  aiohttp:
+    build: .
+    restart: always
+    command: ./start_gunicorn.sh
+    ports:
+    - 4321:8000
+    depends_on:
+      - db
+    env_file:
+      - ./.env
