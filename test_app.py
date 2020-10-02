@@ -1,8 +1,7 @@
-import pytest
 import jwt
-
+import pytest
 from app import create_app
-from models import User, Task, TaskLog, STATUS_LIST
+from models import STATUS_LIST, Task, TaskLog, User
 from settings import JWT_SECRET
 
 
@@ -19,13 +18,11 @@ def client(loop, aiohttp_client, app):
 
 @pytest.fixture()
 async def token(client, app):
-    print("setup")
     await client.post('/register', data={'login': 'ivan', 'password': '123456'})
     token_jwt = jwt.encode(
         {"username": 'ivan', "scopes": [f"username:ivan"]}, JWT_SECRET
     )
     yield token_jwt.decode()
-    print("teardown")
 
 
 @pytest.fixture

@@ -1,4 +1,4 @@
-from views import GetToken, Register, TaskAPI, SingleTaskAPI, TaskLogs
+from views import GetToken, Register, SingleTaskAPI, TaskAPI, TaskLogs
 
 
 def setup_routes(app):

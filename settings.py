@@ -1,5 +1,5 @@
-import os
 import logging.config
+import os
 
 from dotenv import load_dotenv
 
@@ -15,7 +15,6 @@ DATABASE = {
     'host': os.getenv('DB_HOST'),
 }
 
-# Настройки логгера
 logger_config = {
     'version': 1,
     'disable_exsisting_logger': False,

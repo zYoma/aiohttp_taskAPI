@@ -1,10 +1,9 @@
+from datetime import datetime
+
 import peewee
 import peewee_async
-from datetime import datetime
 import peeweedbevolve
-
 import settings
-
 
 database = peewee_async.PostgresqlDatabase(None)
 

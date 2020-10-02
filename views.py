@@ -5,9 +5,8 @@ import jwt
 import peewee
 from aiohttp import web
 from aiohttp_jwt import login_required
-
+from models import STATUS_LIST, Task, TaskLog, User
 from settings import JWT_SECRET, PASS_SALT
-from models import User, Task, TaskLog, STATUS_LIST
 
 
 class TaskLogs(web.View):

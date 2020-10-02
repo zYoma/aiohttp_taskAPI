@@ -1,10 +1,9 @@
-from aiohttp import web
 import aiohttp_debugtoolbar
 import peewee_async
+from aiohttp import web
 from aiohttp_jwt import JWTMiddleware
-
-from settings import JWT_SECRET, DATABASE, logger
 from models import database
+from settings import DATABASE, JWT_SECRET, logger
 from urls import setup_routes
 
 jwt_middleware = JWTMiddleware(
@@ -22,6 +21,7 @@ async def create_app():
     app.on_startup.append(on_start)
     app.on_cleanup.append(on_shutdown)
     return app
+
 
 async def on_start(app):
     database.init(**DATABASE)
