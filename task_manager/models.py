@@ -3,7 +3,6 @@ from datetime import datetime
 import peewee
 import peewee_async
 import peeweedbevolve
-import settings
 
 database = peewee_async.PostgresqlDatabase(None)
 
@@ -61,5 +60,6 @@ class TaskLog(BaseModel):
 
 
 if __name__ == '__main__':
-    database.init(**settings.DATABASE)
+    from settings import DATABASE
+    database.init(**DATABASE)
     database.evolve()

@@ -2,18 +2,20 @@ import aiohttp_debugtoolbar
 import peewee_async
 from aiohttp import web
 from aiohttp_jwt import JWTMiddleware
-from models import database
-from settings import DATABASE, JWT_SECRET, logger
-from urls import setup_routes
+from task_manager.models import database
+from task_manager.settings import DATABASE, DEBUG, JWT_SECRET, logger
+from task_manager.urls import setup_routes
 
 jwt_middleware = JWTMiddleware(
     JWT_SECRET, request_property="user", credentials_required=False
 )
 
-
 async def create_app():
-    app = web.Application(
-        middlewares=[jwt_middleware, aiohttp_debugtoolbar.middleware])
+    middlewares = [jwt_middleware]
+    
+    middlewares.append(aiohttp_debugtoolbar.middleware)
+    app = web.Application(middlewares=middlewares)
+    
     aiohttp_debugtoolbar.setup(
         app, intercept_redirects=False, check_host=False)
     setup_routes(app)
@@ -28,8 +30,15 @@ async def on_start(app):
     app.database = database
     app.database.set_allow_sync(False)
     app.objects = peewee_async.Manager(app.database)
+    if DEBUG:
+        import aioreloader
+        aioreloader.start()
 
 
 async def on_shutdown(app):
     await app.objects.close()
     await app.shutdown()
+
+if __name__=='__main__' and DEBUG:
+    from task_manager.settings import HOST, PORT
+    web.run_app(create_app(), host=HOST, port=PORT)

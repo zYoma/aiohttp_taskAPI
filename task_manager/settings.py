@@ -3,7 +3,14 @@ import os
 
 from dotenv import load_dotenv
 
-load_dotenv()
+DEBUG = False
+
+if DEBUG:
+    load_dotenv('.env_local')
+    HOST = os.getenv('HOST')
+    PORT = os.getenv('PORT')
+else:
+    load_dotenv()
 
 JWT_SECRET = os.getenv('JWT_SECRET')
 PASS_SALT = os.getenv('PASS_SALT')
