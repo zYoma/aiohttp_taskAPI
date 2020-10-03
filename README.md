@@ -51,7 +51,7 @@ PASS_SALT=соль для хеширования паролей
 Приложение будет доступно на порту **4321** (*можно изменить в docker-compose.yaml*).
 
 ### При первом запуске необходимо создать БД командой:
-``` docker-compose run --rm aiohttp python models.py ```
+``` docker-compose run --rm aiohttp python task_manager/models.py ```
 
 ### Для запуска тестов:
 ``` docker-compose run --rm aiohttp pytest ```
