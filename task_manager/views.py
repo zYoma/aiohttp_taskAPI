@@ -97,7 +97,7 @@ class SingleTaskAPI(web.View):
         user = await self.get_user()
         if user.id != task.user_id:
             return web.json_response({'error': 'Access is denied'}, status=403)
-            
+
         await self.app.objects.delete(task)
         self.app.logger.debug(f'Удалена задача {task.name}')
         return web.json_response({'status': 'deleted'}, status=204)
@@ -154,23 +154,25 @@ class TaskAPI(web.View):
         completion_at = data.get('completion_at')
 
         user = await self.get_user()
-        tasks = await self.app.objects.execute(Task.select().where(Task.user == user))
+        tasks = status_query = completion_at_query = Task.select().where(Task.user == user)
 
         if status:
             check_status = await validate_status(status)
             if not check_status:
                 return web.json_response({'error': 'incorrect status field'}, status=400)
 
-            tasks = [task for task in tasks if task.status == status]
+            status_query = Task.select().where(Task.status == status, Task.user == user)
 
         if completion_at:
             is_valid_completion_at = await validate_completion_at(completion_at)
             if not is_valid_completion_at:
                 return web.json_response({'error': 'incorrect completion_at format (%d-%m-%Y)'}, status=400)
 
-            tasks = [
-                task for task in tasks if task.completion_at is not None and task.completion_at <= is_valid_completion_at]
+            completion_at_query = Task.select().where(Task.completion_at >= is_valid_completion_at, Task.user == user)
 
+        query = tasks & status_query & completion_at_query
+        tasks = await self.app.objects.execute(query)
+        
         result_list = []
         for task in tasks:
             obj = await serializer(task)
