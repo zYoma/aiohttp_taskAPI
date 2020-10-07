@@ -63,6 +63,10 @@ class SingleTaskAPI(web.View):
         if task is None:
             return web.json_response({'error': 'task not found'}, status=400)
 
+        user = await self.get_user()
+        if user.id != task.user_id:
+            return web.json_response({'error': 'Access is denied'}, status=403)
+
         data = await self.request.post()
         self.name = data.get('name')
         self.description = data.get('description')
@@ -90,6 +94,10 @@ class SingleTaskAPI(web.View):
         task = await self.get_task()
         if task is None:
             return web.json_response({'error': 'task not found'}, status=400)
+        user = await self.get_user()
+        if user.id != task.user_id:
+            return web.json_response({'error': 'Access is denied'}, status=403)
+            
         await self.app.objects.delete(task)
         self.app.logger.debug(f'Удалена задача {task.name}')
         return web.json_response({'status': 'deleted'}, status=204)
@@ -118,11 +126,18 @@ class SingleTaskAPI(web.View):
 
     async def get_task(self):
         try:
-            task = await self.app.objects.get(Task, id=self.id)
+            task = await self.app.objects.get(Task.select().join(User).where(Task.id == self.id))
         except peewee.DoesNotExist:
             return None
         else:
             return task
+
+    async def get_user(self):
+        """ Получаем логин пользователя из словаря request
+            Возвращаем объект User с данным логином.
+        """
+        username = self.request["user"].get("username")
+        return await self.app.objects.get(User, login=username)
 
 
 class TaskAPI(web.View):
