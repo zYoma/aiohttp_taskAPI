@@ -4,6 +4,7 @@ from aiohttp import web
 from aiohttp_jwt import login_required
 
 from .models import Task, TaskLog, User
+from .shemes import FilterTask, GetTaskSchema, PutTaskSchema, TaskSchema
 from .utils import (create_jwt, gen_hash, serializer, validate_completion_at,
                     validate_status)
 
@@ -52,7 +53,9 @@ class SingleTaskAPI(web.View):
         task = await self.get_task()
         if task is None:
             return web.json_response({'error': 'task not found'})
-        return web.json_response(await serializer(task), status=200)
+
+        data = TaskSchema(**task.__dict__['__data__'])
+        return web.json_response(text=data.json(), status=200)
 
     @login_required
     async def put(self):
@@ -72,19 +75,18 @@ class SingleTaskAPI(web.View):
         self.description = data.get('description')
         self.status = data.get('status')
         self.completion_at = data.get('completion_at')
-        if self.status:
-            check_status = await validate_status(self.status)
-            if not check_status:
-                return web.json_response({'error': 'incorrect status. available values(new, planned, in_work, сompleted)'}, status=400)
 
-        if self.completion_at:
-            is_valid_completion_at = await validate_completion_at(self.completion_at)
-            if not is_valid_completion_at:
-                return web.json_response({'error': 'incorrect completion_at format (%d-%m-%Y)'}, status=400)
-
+        data = PutTaskSchema(
+            user=user.id,
+            name=self.name, 
+            description=self.description,
+            status=self.status,
+            completion_at=self.completion_at,
+        )
+        
         await self.update_fields(task)
         updeted_task = await self.get_task()
-        return web.json_response(await serializer(updeted_task), status=200)
+        return web.json_response(data.json(), status=200)
 
     @login_required
     async def delete(self):
@@ -156,27 +158,24 @@ class TaskAPI(web.View):
         user = await self.get_user()
         tasks = status_query = completion_at_query = Task.select().where(Task.user == user)
 
+        data = FilterTask(
+            status=status,
+            completion_at=completion_at,
+        )
         if status:
-            check_status = await validate_status(status)
-            if not check_status:
-                return web.json_response({'error': 'incorrect status field'}, status=400)
-
             status_query = Task.select().where(Task.status == status, Task.user == user)
 
         if completion_at:
-            is_valid_completion_at = await validate_completion_at(completion_at)
-            if not is_valid_completion_at:
-                return web.json_response({'error': 'incorrect completion_at format (%d-%m-%Y)'}, status=400)
-
-            completion_at_query = Task.select().where(Task.completion_at >= is_valid_completion_at, Task.user == user)
+            completion_at_query = Task.select().where(
+                Task.completion_at >= data['completion_at'], Task.user == user)
 
         query = tasks & status_query & completion_at_query
         tasks = await self.app.objects.execute(query)
-        
+
         result_list = []
         for task in tasks:
-            obj = await serializer(task)
-            result_list.append(obj)
+            obj = GetTaskSchema(**task.__dict__['__data__'])
+            result_list.append(obj.json())
 
         return web.json_response(result_list, status=200)
 
@@ -190,31 +189,22 @@ class TaskAPI(web.View):
         status = data.get('status')
         completion_at = data.get('completion_at')
 
-        is_valid_atributes = await self.validate_atributes([name, description, status])
-        if not is_valid_atributes:
-            return web.json_response({'error': 'incorrect data'}, status=400)
-
-        check_status = await validate_status(status)
-        if not check_status:
-            return web.json_response({'error': 'incorrect status. available values(new, planned, in_work, сompleted)'}, status=400)
-
-        if completion_at:
-            is_valid_completion_at = await validate_completion_at(completion_at)
-            if not is_valid_completion_at:
-                return web.json_response({'error': 'incorrect completion_at format (%d-%m-%Y)'}, status=400)
-
         user = await self.get_user()
-
-        new_task = await self.app.objects.create(
-            Task,
-            user=user,
-            name=name,
+        data = TaskSchema(
+            user=user.id,
+            name=name, 
             description=description,
             status=status,
-            completion_at=is_valid_completion_at if completion_at else None,
+            completion_at=completion_at,
         )
+        
+        new_task = await self.app.objects.create(
+            Task,
+            **data.dict()
+        )
+        
         self.app.logger.debug(f'Создана задача {new_task}.')
-        return web.json_response(await serializer(new_task), status=201)
+        return web.json_response(data.json(), status=201)
 
     async def get_user(self):
         """ Получаем логин пользователя из словаря request
@@ -222,15 +212,6 @@ class TaskAPI(web.View):
         """
         username = self.request["user"].get("username")
         return await self.app.objects.get(User, login=username)
-
-    @staticmethod
-    async def validate_atributes(atribute_list):
-        """ Проверяем что присутсвуют все обяхательные поля. """
-        for atribute in atribute_list:
-            if atribute is None or atribute == '':
-                return False
-
-        return True
 
 
 class GetToken(web.View):

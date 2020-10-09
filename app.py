@@ -1,6 +1,7 @@
 import aiohttp_debugtoolbar
 import peewee_async
 from aiohttp import web
+from aiohttp_apispec import setup_aiohttp_apispec, validation_middleware
 from aiohttp_jwt import JWTMiddleware
 from task_manager.models import database
 from task_manager.settings import DATABASE, DEBUG, JWT_SECRET, logger
@@ -14,10 +15,12 @@ async def create_app():
     middlewares = [jwt_middleware]
     
     middlewares.append(aiohttp_debugtoolbar.middleware)
+    middlewares.append(validation_middleware)
     app = web.Application(middlewares=middlewares)
     
     aiohttp_debugtoolbar.setup(
         app, intercept_redirects=False, check_host=False)
+    setup_aiohttp_apispec(app, swagger_path="/docs")
     setup_routes(app)
     app.logger = logger
     app.on_startup.append(on_start)
